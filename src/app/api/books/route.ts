@@ -1,4 +1,4 @@
-import { BooksInsert, ResultSupabase, insertBook } from "@/utils/supabase";
+import { BooksInsert, ResultSupabase, insertBook } from "@/app/utils/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
 /**

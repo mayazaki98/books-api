@@ -1,4 +1,8 @@
-import { AuthorsInsert, ResultSupabase, insertAuthor } from "@/utils/supabase";
+import {
+  AuthorsInsert,
+  ResultSupabase,
+  insertAuthor,
+} from "@/app/utils/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
 /**

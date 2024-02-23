@@ -2,7 +2,7 @@ import {
   PublishersInsert,
   ResultSupabase,
   insertPublisher,
-} from "@/utils/supabase";
+} from "@/app/utils/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
 /**

@@ -5,7 +5,7 @@ import {
   deletePublisher,
   getPublisher,
   updatePublisher,
-} from "@/utils/supabase";
+} from "@/app/utils/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
 /**

@@ -5,7 +5,7 @@ import {
   deleteBook,
   getBook,
   updateBook,
-} from "@/utils/supabase";
+} from "@/app/utils/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
