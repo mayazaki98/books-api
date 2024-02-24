@@ -43,6 +43,22 @@ export type PublishersRowResult = PublishersRow & {
   relatedAuthors: AuthorsRow[];
 };
 
+export type BooksWithAuthorsRow = BooksRow & {
+  authors: AuthorsRow | null;
+};
+
+export type BooksWithPublishersRow = BooksRow & {
+  publishers: PublishersRow | null;
+};
+
+export type AuthorsWithBooksRow = AuthorsRow & {
+  books: BooksWithPublishersRow[];
+};
+
+export type PublishersRowWithBooksRow = PublishersRow & {
+  books: BooksWithAuthorsRow[];
+};
+
 /**
  * 書籍データ取得結果
  */
@@ -143,7 +159,11 @@ export const getBook = async (isbn: string): Promise<ResultGetBook> => {
 export const updateBook = async (
   isbn: string,
   book: BooksUpdate
-): Promise<ResultSupabase> => {
+): Promise<ResultGetBook> => {
+  let res: ResultGetBook = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
   const { data, error } = await supabase
     .from("books")
     .update({
@@ -154,7 +174,23 @@ export const updateBook = async (
       publishedAt: book.publishedAt,
     })
     .eq("isbn", isbn)
-    .select();
+    .select(
+      ` 
+        isbn,
+        name,
+        publishedAt,
+        authorId,
+        publisherId,
+        authors (
+          authorId,
+          name
+        ),
+        publishers (
+          publisherId,
+          name
+        )
+      `
+    );
 
   console.log(
     `updateBook data=${JSON.stringify(data)}, error=${JSON.stringify(error)}`
@@ -162,28 +198,34 @@ export const updateBook = async (
 
   if (error) {
     console.log(`updateBook exists error`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   if (!data) {
     console.log(`updateBook updated data is null`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   switch (data.length) {
     case 0:
       console.log(`updateBook updated data count is zero`);
-      return ResultSupabase.Nothing;
+      res.result = ResultSupabase.Nothing;
+      return res;
 
     case 1:
       console.log(`updateBook find updated data`);
-      return ResultSupabase.Success;
+      res.data = data[0];
+      res.result = ResultSupabase.Success;
+      return res;
 
     default:
       console.log(
         `updateBook updated data count is unexpected(${data.length})`
       );
-      return ResultSupabase.Error;
+      res.result = ResultSupabase.Error;
+      return res;
   }
 };
 
@@ -192,9 +234,11 @@ export const updateBook = async (
  * @param book 書籍データ
  * @returns 書籍データ追加結果
  */
-export const insertBook = async (
-  book: BooksInsert
-): Promise<ResultSupabase> => {
+export const insertBook = async (book: BooksInsert): Promise<ResultGetBook> => {
+  let res: ResultGetBook = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
   const { data, error } = await supabase
     .from("books")
     .insert({
@@ -204,7 +248,23 @@ export const insertBook = async (
       publisherId: book.publisherId,
       publishedAt: book.publishedAt,
     })
-    .select();
+    .select(
+      ` 
+        isbn,
+        name,
+        publishedAt,
+        authorId,
+        publisherId,
+        authors (
+          authorId,
+          name
+        ),
+        publishers (
+          publisherId,
+          name
+        )
+      `
+    );
 
   console.log(
     `updateBook data=${JSON.stringify(data)}, error=${JSON.stringify(error)}`
@@ -212,28 +272,34 @@ export const insertBook = async (
 
   if (error) {
     console.log(`updateBook exists error`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   if (!data) {
     console.log(`updateBook inserted data is null`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   switch (data.length) {
     case 0:
       console.log(`updateBook inserted data count is zero`);
-      return ResultSupabase.Error;
+      res.result = ResultSupabase.Error;
+      return res;
 
     case 1:
       console.log(`updateBook find inserted data`);
-      return ResultSupabase.Success;
+      res.data = data[0];
+      res.result = ResultSupabase.Success;
+      return res;
 
     default:
       console.log(
         `updateBook inserted data count is unexpected(${data.length})`
       );
-      return ResultSupabase.Error;
+      res.result = ResultSupabase.Error;
+      return res;
   }
 };
 
@@ -252,6 +318,41 @@ export const deleteBook = async (isbn: string): Promise<ResultSupabase> => {
   }
 
   return ResultSupabase.Success;
+};
+
+/**
+ * 著者のクエリ取得結果からレスポンス結果へ変換する
+ * @param src 著者のクエリ取得結果
+ * @returns 著者のレスポンス結果
+ */
+const convertAuthorToResult = (src: AuthorsWithBooksRow): AuthorsRowResult => {
+  let dst: AuthorsRowResult = {
+    authorId: src.authorId,
+    name: src.name,
+    books: [],
+    relatedPublishers: [],
+  };
+
+  for (const books of src.books) {
+    dst.books.push({
+      isbn: books.isbn,
+      name: books.name,
+      publishedAt: books.publishedAt,
+      authorId: books.authorId,
+      publisherId: books.publisherId,
+    });
+    if (books.publishers) {
+      if (
+        !dst.relatedPublishers.find(
+          (element) => element.publisherId === books.publisherId
+        )
+      ) {
+        dst.relatedPublishers.push(books.publishers);
+      }
+    }
+  }
+
+  return dst;
 };
 
 /**
@@ -309,28 +410,7 @@ export const getAuthor = async (authorId: number): Promise<ResultGetAuthor> => {
 
     case 1:
       console.log(`getAuthor find data`);
-      const d = data[0];
-      res.data = {
-        authorId: d.authorId,
-        name: d.name,
-        books: [],
-        relatedPublishers: [],
-      };
-      for (const books of d.books) {
-        res.data.books.push({
-          isbn: books.isbn,
-          name: books.name,
-          publishedAt: books.publishedAt,
-          authorId: books.authorId,
-          publisherId: books.publisherId,
-        });
-        if (books.publishers) {
-          res.data.relatedPublishers.push({
-            publisherId: books.publishers.publisherId,
-            name: books.publishers.name,
-          });
-        }
-      }
+      res.data = convertAuthorToResult(data[0]);
       res.result = ResultSupabase.Success;
       return res;
 
@@ -350,7 +430,11 @@ export const getAuthor = async (authorId: number): Promise<ResultGetAuthor> => {
 export const updateAuthor = async (
   authorId: number,
   author: AuthorsUpdate
-): Promise<ResultSupabase> => {
+): Promise<ResultGetAuthor> => {
+  let res: ResultGetAuthor = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
   const { data, error } = await supabase
     .from("authors")
     .update({
@@ -358,7 +442,22 @@ export const updateAuthor = async (
       name: author.name,
     })
     .eq("authorId", authorId)
-    .select();
+    .select(
+      `
+        authorId, 
+        name,
+        books (
+          isbn,
+          name,
+          publishedAt,
+          authorId,
+          publisherId,
+          publishers (
+            publisherId,
+            name
+          )
+        )`
+    );
 
   console.log(
     `updateAuthor data=${JSON.stringify(data)}, error=${JSON.stringify(error)}`
@@ -366,28 +465,34 @@ export const updateAuthor = async (
 
   if (error) {
     console.log(`updateAuthor exists error`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   if (!data) {
     console.log(`updateAuthor updated data is null`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   switch (data.length) {
     case 0:
       console.log(`updateAuthor updated data count is zero`);
-      return ResultSupabase.Nothing;
+      res.result = ResultSupabase.Nothing;
+      return res;
 
     case 1:
       console.log(`updateAuthor find updated data`);
-      return ResultSupabase.Success;
+      res.data = convertAuthorToResult(data[0]);
+      res.result = ResultSupabase.Success;
+      return res;
 
     default:
       console.log(
         `updateAuthor updated data count is unexpected(${data.length})`
       );
-      return ResultSupabase.Error;
+      res.result = ResultSupabase.Error;
+      return res;
   }
 };
 
@@ -398,14 +503,33 @@ export const updateAuthor = async (
  */
 export const insertAuthor = async (
   author: AuthorsInsert
-): Promise<ResultSupabase> => {
+): Promise<ResultGetAuthor> => {
+  let res: ResultGetAuthor = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
   const { data, error } = await supabase
     .from("authors")
     .insert({
       authorId: author.authorId,
       name: author.name,
     })
-    .select();
+    .select(
+      `
+        authorId, 
+        name,
+        books (
+          isbn,
+          name,
+          publishedAt,
+          authorId,
+          publisherId,
+          publishers (
+            publisherId,
+            name
+          )
+        )`
+    );
 
   console.log(
     `updateAuthor data=${JSON.stringify(data)}, error=${JSON.stringify(error)}`
@@ -413,28 +537,34 @@ export const insertAuthor = async (
 
   if (error) {
     console.log(`updateAuthor exists error`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   if (!data) {
     console.log(`updateAuthor updated data is null`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   switch (data.length) {
     case 0:
       console.log(`updateAuthor inserted data count is zero`);
-      return ResultSupabase.Error;
+      res.result = ResultSupabase.Error;
+      return res;
 
     case 1:
       console.log(`updateAuthor find inserted data`);
-      return ResultSupabase.Success;
+      res.data = convertAuthorToResult(data[0]);
+      res.result = ResultSupabase.Success;
+      return res;
 
     default:
       console.log(
         `updateAuthor inserted data count is unexpected(${data.length})`
       );
-      return ResultSupabase.Error;
+      res.result = ResultSupabase.Error;
+      return res;
   }
 };
 
@@ -458,6 +588,37 @@ export const deleteAuthor = async (
   }
 
   return ResultSupabase.Success;
+};
+
+const convertPublisherToResult = (
+  src: PublishersRowWithBooksRow
+): PublishersRowResult => {
+  let dst: PublishersRowResult;
+  dst = {
+    publisherId: src.publisherId,
+    name: src.name,
+    books: [],
+    relatedAuthors: [],
+  };
+  for (const books of src.books) {
+    dst.books.push({
+      isbn: books.isbn,
+      name: books.name,
+      publishedAt: books.publishedAt,
+      authorId: books.authorId,
+      publisherId: books.publisherId,
+    });
+    if (books.authors) {
+      if (
+        !dst.relatedAuthors.find(
+          (element) => element.authorId === books.authorId
+        )
+      ) {
+        dst.relatedAuthors.push(books.authors);
+      }
+    }
+  }
+  return dst;
 };
 
 /**
@@ -518,28 +679,7 @@ export const getPublisher = async (
 
     case 1:
       console.log(`getPublisher find data`);
-      const d = data[0];
-      res.data = {
-        publisherId: d.publisherId,
-        name: d.name,
-        books: [],
-        relatedAuthors: [],
-      };
-      for (const books of d.books) {
-        res.data.books.push({
-          isbn: books.isbn,
-          name: books.name,
-          publishedAt: books.publishedAt,
-          authorId: books.authorId,
-          publisherId: books.publisherId,
-        });
-        if (books.authors) {
-          res.data.relatedAuthors.push({
-            authorId: books.authors.authorId,
-            name: books.authors.name,
-          });
-        }
-      }
+      res.data = convertPublisherToResult(data[0]);
       res.result = ResultSupabase.Success;
       return res;
 
@@ -559,7 +699,11 @@ export const getPublisher = async (
 export const updatePublisher = async (
   publisherId: number,
   publisher: PublishersUpdate
-): Promise<ResultSupabase> => {
+): Promise<ResultGetPublisher> => {
+  let res: ResultGetPublisher = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
   const { data, error } = await supabase
     .from("publishers")
     .update({
@@ -567,7 +711,23 @@ export const updatePublisher = async (
       name: publisher.name,
     })
     .eq("publisherId", publisherId)
-    .select();
+    .select(
+      `
+        publisherId,
+        name,
+        books (
+          isbn,
+          name,
+          publishedAt,
+          authorId,
+          publisherId,
+          authors (
+            authorId,
+            name
+          )
+        )
+      `
+    );
 
   console.log(
     `updatePublisher data=${JSON.stringify(data)}, error=${JSON.stringify(
@@ -577,28 +737,34 @@ export const updatePublisher = async (
 
   if (error) {
     console.log(`updatePublisher exists error`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   if (!data) {
     console.log(`updatePublisher updated data is null`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   switch (data.length) {
     case 0:
       console.log(`updatePublisher updated data count is zero`);
-      return ResultSupabase.Nothing;
+      res.result = ResultSupabase.Nothing;
+      return res;
 
     case 1:
       console.log(`updatePublisher find updated data`);
-      return ResultSupabase.Success;
+      res.data = convertPublisherToResult(data[0]);
+      res.result = ResultSupabase.Success;
+      return res;
 
     default:
       console.log(
         `updatePublisher updated data count is unexpected(${data.length})`
       );
-      return ResultSupabase.Error;
+      res.result = ResultSupabase.Error;
+      return res;
   }
 };
 
@@ -609,14 +775,34 @@ export const updatePublisher = async (
  */
 export const insertPublisher = async (
   publisher: PublishersInsert
-): Promise<ResultSupabase> => {
+): Promise<ResultGetPublisher> => {
+  let res: ResultGetPublisher = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
   const { data, error } = await supabase
     .from("publishers")
     .insert({
       publisherId: publisher.publisherId,
       name: publisher.name,
     })
-    .select();
+    .select(
+      `
+        publisherId,
+        name,
+        books (
+          isbn,
+          name,
+          publishedAt,
+          authorId,
+          publisherId,
+          authors (
+            authorId,
+            name
+          )
+        )
+      `
+    );
 
   console.log(
     `updatePublisher data=${JSON.stringify(data)}, error=${JSON.stringify(
@@ -626,28 +812,34 @@ export const insertPublisher = async (
 
   if (error) {
     console.log(`updatePublisher exists error`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   if (!data) {
     console.log(`updatePublisher inserted data is null`);
-    return ResultSupabase.Error;
+    res.result = ResultSupabase.Error;
+    return res;
   }
 
   switch (data.length) {
     case 0:
       console.log(`updatePublisher inserted data count is zero`);
-      return ResultSupabase.Error;
+      res.result = ResultSupabase.Error;
+      return res;
 
     case 1:
       console.log(`updatePublisher find inserted data`);
-      return ResultSupabase.Success;
+      res.data = convertPublisherToResult(data[0]);
+      res.result = ResultSupabase.Success;
+      return res;
 
     default:
       console.log(
         `updatePublisher inserted data count is unexpected(${data.length})`
       );
-      return ResultSupabase.Error;
+      res.result = ResultSupabase.Error;
+      return res;
   }
 };
 

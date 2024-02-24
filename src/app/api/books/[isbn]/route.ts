@@ -20,22 +20,31 @@ export const GET = async (
 ) => {
   console.log(`${req.url} GET called`);
 
+  //リクエスト取得
   const isbn = params.isbn;
   if (!isbn) {
     console.log("ISBN が指定されていない");
-    return NextResponse.json(null, { status: 400 });
+    return new Response(null, { status: 400 });
   }
 
-  const result: ResultGetBook = await getBook(isbn);
+  //データ取得
+  let result: ResultGetBook;
+  try {
+    result = await getBook(isbn);
+  } catch (e) {
+    console.log("DBアクセス中に例外発生");
+    console.error(e);
+    return new Response(null, { status: 500 });
+  }
 
   switch (result.result) {
     case ResultSupabase.Error:
       console.log("データ取得中にエラー発生");
-      return NextResponse.json(null, { status: 500 });
+      return new Response(null, { status: 500 });
 
     case ResultSupabase.Nothing:
       console.log("該当データなし");
-      return NextResponse.json(null, { status: 404 });
+      return new Response(null, { status: 404 });
   }
 
   console.log("取得成功");
@@ -54,31 +63,52 @@ export const PUT = async (
 ) => {
   console.log(`${req.url} PUT called`);
 
+  //リクエスト取得
   const isbn = params.isbn;
   if (!isbn) {
     console.log("ISBN が指定されていない");
-    return NextResponse.json(null, { status: 400 });
+    return new Response(null, { status: 400 });
   }
 
-  const requestBody: BooksUpdate = await req.json();
-  const result: ResultSupabase = await updateBook(isbn, requestBody);
+  let requestBody: BooksUpdate;
+  try {
+    requestBody = await req.json();
+    if (!requestBody) {
+      console.log("リクエストJSONがnull");
+      return new Response(null, { status: 400 });
+    }
+  } catch (e) {
+    console.log("リクエストJSON取得で例外発生");
+    console.error(e);
+    return new Response(null, { status: 400 });
+  }
 
-  switch (result) {
+  //データ更新
+  let result: ResultGetBook;
+  try {
+    result = await updateBook(isbn, requestBody);
+  } catch (e) {
+    console.log("DBアクセス中に例外発生");
+    console.error(e);
+    return new Response(null, { status: 500 });
+  }
+
+  switch (result.result) {
     case ResultSupabase.Error:
       console.log("データ更新中にエラー発生");
-      return NextResponse.json(null, { status: 500 });
+      return new Response(null, { status: 500 });
 
     case ResultSupabase.Nothing:
       console.log("該当データなし");
-      return NextResponse.json(null, { status: 404 });
+      return new Response(null, { status: 404 });
   }
 
   console.log("更新成功");
-  return NextResponse.json(null, { status: 200 });
+  return NextResponse.json(result.data, { status: 200 });
 };
 
 /**
- * books DELETE 更新
+ * books DELETE 削除
  * @param req リクエスト
  * @param param1
  * @returns
@@ -89,24 +119,33 @@ export const DELETE = async (
 ) => {
   console.log(`${req.url} PUT called`);
 
+  //リクエスト取得
   const isbn = params.isbn;
   if (!isbn) {
     console.log("ISBN が指定されていない");
-    return NextResponse.json(null, { status: 400 });
+    return new Response(null, { status: 400 });
   }
 
-  const result: ResultSupabase = await deleteBook(isbn);
+  //データ削除
+  let result: ResultSupabase;
+  try {
+    result = await deleteBook(isbn);
+  } catch (e) {
+    console.log("DBアクセス中に例外発生");
+    console.error(e);
+    return new Response(null, { status: 500 });
+  }
 
   switch (result) {
     case ResultSupabase.Error:
       console.log("データ削除中にエラー発生");
-      return NextResponse.json(null, { status: 500 });
+      return new Response(null, { status: 500 });
 
     case ResultSupabase.Nothing:
       console.log("該当データなし");
-      return NextResponse.json(null, { status: 404 });
+      return new Response(null, { status: 404 });
   }
 
   console.log("削除成功");
-  return NextResponse.json(null, { status: 200 });
+  return new Response(null, { status: 204 });
 };

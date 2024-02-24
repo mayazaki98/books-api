@@ -1,4 +1,10 @@
-import { BooksInsert, ResultSupabase, insertBook } from "@/app/utils/supabase";
+import {
+  BooksInsert,
+  ResultGetBook,
+  ResultSupabase,
+  getBook,
+  insertBook,
+} from "@/app/utils/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -9,15 +15,59 @@ import { NextRequest, NextResponse } from "next/server";
 export const POST = async (req: NextRequest) => {
   console.log(`${req.url} POST called`);
 
-  const requestBody: BooksInsert = await req.json();
-  const result: ResultSupabase = await insertBook(requestBody);
+  //リクエスト取得
+  let requestBody: BooksInsert;
+  try {
+    requestBody = await req.json();
+    if (!requestBody) {
+      console.log("リクエストJSONがnull");
+      return new Response(null, { status: 400 });
+    }
+  } catch (e) {
+    console.log("リクエストJSON取得で例外発生");
+    console.error(e);
+    return new Response(null, { status: 400 });
+  }
 
-  switch (result) {
+  //既にデータが存在しているかを確認
+  let resultGet: ResultGetBook;
+  try {
+    resultGet = await getBook(requestBody.isbn);
+  } catch (e) {
+    console.log("DBアクセス中に例外発生");
+    console.error(e);
+    return new Response(null, { status: 500 });
+  }
+
+  switch (resultGet.result) {
     case ResultSupabase.Error:
-      console.log("データ追加中にエラー発生");
-      return NextResponse.json(null, { status: 500 });
+      console.log("データ取得中にエラー発生");
+      return new Response(null, { status: 500 });
+
+    case ResultSupabase.Success:
+      console.log(`既にデータが存在する isbn=${requestBody.isbn}`);
+      return new Response(null, { status: 409 });
+
+    case ResultSupabase.Nothing:
+      //データが存在しないので作成可能
+      break;
+  }
+
+  //データ作成
+  let result: ResultGetBook;
+  try {
+    result = await insertBook(requestBody);
+  } catch (e) {
+    console.log("DBアクセス中に例外発生");
+    console.error(e);
+    return new Response(null, { status: 500 });
+  }
+
+  if (result.result !== ResultSupabase.Success) {
+    console.log("データ追加中にエラー発生");
+    return new Response(null, { status: 500 });
   }
 
   console.log("追加成功");
-  return NextResponse.json(null, { status: 200 });
+  return NextResponse.json(result.data, { status: 201 });
 };
