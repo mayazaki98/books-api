@@ -1,5 +1,9 @@
 import { Database } from "@/app/utils/supabaseSchema";
 import { createClient } from "@supabase/supabase-js";
+import { instance, mock, reset, when } from "ts-mockito";
+import { POST as signinPOST } from "@/app/api/auth/signin/route";
+import { POST as signoutPOST } from "@/app/api/auth/signout/route";
+import { NextRequest } from "next/server";
 
 // Create a single supabase client for interacting with your database
 export const supabase = createClient<Database>(
@@ -7,32 +11,28 @@ export const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export const initializeTestData = async () => {
+export const testUtilSignIn = async (mockedRequest: NextRequest) => {
+  console.log("サインイン");
+
+  when(mockedRequest.url).thenReturn("http://localhost:3000/api/auth/signin");
+  when(mockedRequest.json).thenReturn(async () => {
+    return {
+      email: "test01@booksapi.test.com",
+      password: "jrw0RPR*hbt-zex5kqx",
+    };
+  });
+  await signinPOST(instance(mockedRequest));
+};
+
+export const testUtilsSignOut = async (mockedRequest: NextRequest) => {
+  console.log("サインアウト");
+
+  when(mockedRequest.url).thenReturn("http://localhost:3000/api/auth/signout");
+  await signoutPOST(instance(mockedRequest));
+};
+
+export const testUtilsCreateTestData = async () => {
   console.log("テストデータ作成");
-
-  //authors 削除
-  {
-    const { error } = await supabase
-      .from("authors")
-      .delete()
-      .in("authorId", [800, 801, 802]);
-  }
-
-  //publishers 削除
-  {
-    const { error } = await supabase
-      .from("publishers")
-      .delete()
-      .in("publisherId", [900, 901, 902]);
-  }
-
-  //books 削除
-  {
-    const { error } = await supabase
-      .from("books")
-      .delete()
-      .in("isbn", ["Z00", "Z01", "Z02"]);
-  }
 
   //authors 追加
   {
@@ -80,5 +80,33 @@ export const initializeTestData = async () => {
         publishedAt: "2022-09-04T16:07:48.53",
       },
     ]);
+  }
+};
+
+export const testUtilsDeleteTestData = async () => {
+  console.log("テストデータ削除");
+
+  //authors 削除
+  {
+    const { error } = await supabase
+      .from("authors")
+      .delete()
+      .in("authorId", [800, 801, 802]);
+  }
+
+  //publishers 削除
+  {
+    const { error } = await supabase
+      .from("publishers")
+      .delete()
+      .in("publisherId", [900, 901, 902]);
+  }
+
+  //books 削除
+  {
+    const { error } = await supabase
+      .from("books")
+      .delete()
+      .in("isbn", ["Z00", "Z01", "Z02"]);
   }
 };

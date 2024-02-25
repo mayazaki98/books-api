@@ -4,6 +4,7 @@ import {
   ResultSupabase,
   deleteBook,
   getBook,
+  getUser,
   updateBook,
 } from "@/app/utils/supabase";
 import { NextRequest, NextResponse } from "next/server";
@@ -19,6 +20,12 @@ export const GET = async (
   { params }: { params: { isbn: string } }
 ) => {
   console.log(`${req.url} GET called`);
+
+  const resUser = await getUser();
+  if (resUser.result !== ResultSupabase.Success) {
+    console.log("サインインしていない");
+    return new Response(null, { status: 401 });
+  }
 
   //リクエスト取得
   const isbn = params.isbn;
@@ -62,6 +69,12 @@ export const PUT = async (
   { params }: { params: { isbn: string } }
 ) => {
   console.log(`${req.url} PUT called`);
+
+  const resUser = await getUser();
+  if (resUser.result !== ResultSupabase.Success) {
+    console.log("サインインしていない");
+    return new Response(null, { status: 401 });
+  }
 
   //リクエスト取得
   const isbn = params.isbn;
@@ -117,7 +130,13 @@ export const DELETE = async (
   req: NextRequest,
   { params }: { params: { isbn: string } }
 ) => {
-  console.log(`${req.url} PUT called`);
+  console.log(`${req.url} DELETE called`);
+
+  const resUser = await getUser();
+  if (resUser.result !== ResultSupabase.Success) {
+    console.log("サインインしていない");
+    return new Response(null, { status: 401 });
+  }
 
   //リクエスト取得
   const isbn = params.isbn;

@@ -3,6 +3,7 @@ import {
   ResultGetPublisher,
   ResultSupabase,
   getPublisher,
+  getUser,
   insertPublisher,
 } from "@/app/utils/supabase";
 import { NextRequest, NextResponse } from "next/server";
@@ -14,6 +15,12 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export const POST = async (req: NextRequest) => {
   console.log(`${req.url} POST called`);
+
+  const resUser = await getUser();
+  if (resUser.result !== ResultSupabase.Success) {
+    console.log("サインインしていない");
+    return new Response(null, { status: 401 });
+  }
 
   //リクエスト取得
   let requestBody: PublishersInsert;

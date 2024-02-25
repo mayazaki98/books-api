@@ -3,18 +3,30 @@ import { POST } from "@/app/api/authors/route";
 import { DELETE, GET, PUT } from "@/app/api/authors/[authorId]/route";
 import { GET as booksGET } from "@/app/api/books/[isbn]/route";
 import { instance, mock, reset, when } from "ts-mockito";
-import { initializeTestData } from "./testUtil";
+import {
+  testUtilsSignOut,
+  testUtilsDeleteTestData,
+  testUtilSignIn,
+  testUtilsCreateTestData,
+} from "./testUtil";
 
 describe("tests authors", () => {
   const mockedRequest: NextRequest = mock(NextRequest);
 
   beforeAll(async () => {
-    await initializeTestData();
+    await testUtilSignIn(mockedRequest);
+    await testUtilsDeleteTestData();
+    await testUtilsCreateTestData();
   }, 10000);
 
   afterEach(() => {
     reset(mockedRequest);
   });
+
+  afterAll(async () => {
+    await testUtilsDeleteTestData();
+    await testUtilsSignOut(mockedRequest);
+  }, 10000);
 
   // test("データ作成", async () => {
   //   await initializeTestData();

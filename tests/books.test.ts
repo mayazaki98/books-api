@@ -4,18 +4,30 @@ import { DELETE, GET, PUT } from "@/app/api/books/[isbn]/route";
 import { GET as authorsGET } from "@/app/api/authors/[authorId]/route";
 import { GET as publishersGET } from "@/app/api/publishers/[publisherId]/route";
 import { instance, mock, reset, when } from "ts-mockito";
-import { initializeTestData } from "./testUtil";
+import {
+  testUtilsSignOut,
+  testUtilsDeleteTestData,
+  testUtilSignIn,
+  testUtilsCreateTestData,
+} from "./testUtil";
 
 describe("tests books", () => {
   const mockedRequest: NextRequest = mock(NextRequest);
 
   beforeAll(async () => {
-    await initializeTestData();
+    await testUtilSignIn(mockedRequest);
+    await testUtilsDeleteTestData();
+    await testUtilsCreateTestData();
   }, 10000);
 
   afterEach(() => {
     reset(mockedRequest);
   });
+
+  afterAll(async () => {
+    await testUtilsDeleteTestData();
+    await testUtilsSignOut(mockedRequest);
+  }, 10000);
 
   test("GET データなし(isbn:Z02, データ作成前)", async () => {
     when(mockedRequest.url).thenReturn("http://localhost:3000/api/books/Z02");

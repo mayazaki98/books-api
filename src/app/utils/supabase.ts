@@ -1,10 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 import { Database } from "./supabaseSchema";
+import { NextRequest } from "next/server";
 
 // Create a single supabase client for interacting with your database
 export const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export const supabaseAdmin = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE!
 );
 
 /**
@@ -81,6 +87,18 @@ export type ResultGetAuthor = {
 export type ResultGetPublisher = {
   result: ResultSupabase;
   data: PublishersRowResult | null;
+};
+
+export type UserRow = {
+  email: string;
+};
+
+/**
+ * ユーザーデータ取得結果
+ */
+export type ResultGetUser = {
+  result: ResultSupabase;
+  data: UserRow | null;
 };
 
 /**
@@ -863,4 +881,237 @@ export const deletePublisher = async (
   }
 
   return ResultSupabase.Success;
+};
+
+/**
+ * サインアップ
+ * @param email メールアドレス
+ * @param password パスワード
+ * @returns 処理結果
+ */
+export const signUp = async (
+  email: string,
+  password: string
+): Promise<ResultGetUser> => {
+  let res: ResultGetUser = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
+
+  //サインアップ
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  console.log(
+    `signUp data=${JSON.stringify(data)}, error=${JSON.stringify(error)}`
+  );
+
+  if (error) {
+    console.log(`signUp exists error`);
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  if (data && data.user) {
+    if (data.user.identities?.length === 0) {
+      console.log("signUp already used email");
+      res.result = ResultSupabase.Error;
+      return res;
+    }
+  }
+
+  if (!data || !data.user || !data.user.email) {
+    console.log("signUp invalid data");
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  console.log("signUp success");
+  res.data = { email: data.user.email };
+  res.result = ResultSupabase.Success;
+  return res;
+};
+
+/**
+ * サインイン
+ * @param email メールアドレス
+ * @param password パスワード
+ * @returns 処理結果
+ */
+export const signIn = async (
+  email: string,
+  password: string
+): Promise<ResultGetUser> => {
+  let res: ResultGetUser = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
+
+  //サインイン
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  console.log(
+    `signIn data=${JSON.stringify(data)}, error=${JSON.stringify(error)}`
+  );
+
+  if (error) {
+    console.log(`signIn exists error`);
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  if (!data || !data.user || !data.user.email) {
+    console.log("signIn invalid data");
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  console.log("signIn success");
+  res.data = { email: data.user.email };
+  res.result = ResultSupabase.Success;
+  return res;
+};
+
+/**
+ * サインアウト
+ * @returns 処理結果
+ */
+export const signOut = async (): Promise<ResultSupabase> => {
+  //サインアウト
+  const { error } = await supabase.auth.signOut();
+  console.log(`signOut error=${JSON.stringify(error)}`);
+
+  if (error) {
+    console.log(`signOut exists error`);
+    return ResultSupabase.Error;
+  }
+
+  console.log("signOut success");
+  return ResultSupabase.Success;
+};
+
+/**
+ * サインイン中のユーザーのパスワード変更
+ * @param password パスワード
+ * @returns 処理結果
+ */
+export const updatePassword = async (
+  password: string
+): Promise<ResultGetUser> => {
+  let res: ResultGetUser = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
+
+  //パスワード更新
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.updateUser({ password: password });
+
+  console.log(
+    `getUser user=${JSON.stringify(user)}, error=${JSON.stringify(error)}`
+  );
+
+  if (!user || !user.email) {
+    console.log("getUser invalid user");
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  console.log("getUser success");
+  res.data = { email: user.email };
+  res.result = ResultSupabase.Success;
+  return res;
+};
+
+/**
+ * サインイン中のユーザー情報取得
+ * @returns 処理結果
+ */
+export const getUser = async (): Promise<ResultGetUser> => {
+  let res: ResultGetUser = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
+
+  //セッションからユーザー情報取得
+  const { data, error } = await supabase.auth.getSession();
+  console.log(
+    `getUser getSession data=${JSON.stringify(data)}, error=${JSON.stringify(
+      error
+    )}`
+  );
+
+  if (error) {
+    console.log(`getUser getSession exists error`);
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  if (
+    !data ||
+    !data.session ||
+    !data.session.user ||
+    !data.session.user.email
+  ) {
+    console.log("getUser getSession invalid data");
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  console.log("getUser success");
+  res.data = { email: data.session.user.email };
+  res.result = ResultSupabase.Success;
+  return res;
+};
+
+/**
+ * サインイン中のユーザー情報削除
+ * @returns 処理結果
+ */
+export const deleteUser = async (): Promise<ResultSupabase> => {
+  //セッションからユーザーID取得
+  let id: string;
+  {
+    const { data, error } = await supabase.auth.getSession();
+    console.log(
+      `deleteUser getSession data=${JSON.stringify(
+        data
+      )}, error=${JSON.stringify(error)}`
+    );
+
+    if (error) {
+      console.log(`deleteUser getSession exists error`);
+      return ResultSupabase.Error;
+    }
+
+    if (!data || !data.session || !data.session.user || !data.session.user.id) {
+      console.log("deleteUser getSession invalid data");
+      return ResultSupabase.Error;
+    }
+
+    id = data.session.user.id;
+  }
+
+  //ユーザー削除
+  {
+    const {
+      data: { user },
+      error,
+    } = await supabaseAdmin.auth.admin.deleteUser(id);
+    console.log(
+      `deleteUser deleteUser user=${JSON.stringify(
+        user
+      )}, error=${JSON.stringify(error)}`
+    );
+
+    if (error) {
+      console.log(`deleteUser deleteUser exists error`);
+      return ResultSupabase.Error;
+    }
+
+    console.log("deleteUser success");
+    return ResultSupabase.Success;
+  }
 };
