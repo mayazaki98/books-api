@@ -19,7 +19,7 @@ export const GET = async (
   req: NextRequest,
   { params }: { params: { publisherId: number } }
 ) => {
-  console.log(`${req.url} GET called`);
+  console.log(`■${req.url} GET called`);
 
   const resUser = await getUser();
   if (resUser.result !== ResultSupabase.Success) {
@@ -68,7 +68,7 @@ export const PUT = async (
   req: NextRequest,
   { params }: { params: { publisherId: number } }
 ) => {
-  console.log(`${req.url} PUT called`);
+  console.log(`■${req.url} PUT called`);
 
   const resUser = await getUser();
   if (resUser.result !== ResultSupabase.Success) {
@@ -130,7 +130,7 @@ export const DELETE = async (
   req: NextRequest,
   { params }: { params: { publisherId: number } }
 ) => {
-  console.log(`${req.url} DELETE called`);
+  console.log(`■${req.url} DELETE called`);
 
   const resUser = await getUser();
   if (resUser.result !== ResultSupabase.Success) {

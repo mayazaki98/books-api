@@ -7,7 +7,7 @@ import { NextRequest } from "next/server";
  * @returns レスポンス
  */
 export const POST = async (req: NextRequest) => {
-  console.log(`${req.url} POST called`);
+  console.log(`■${req.url} POST called`);
 
   //サインアウト
   let result: ResultSupabase;

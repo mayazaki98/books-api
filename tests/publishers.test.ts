@@ -8,6 +8,7 @@ import {
   testUtilsDeleteTestData,
   testUtilSignIn,
   testUtilsCreateTestData,
+  sleep,
 } from "./testUtil";
 
 describe("tests publishers", () => {
@@ -16,11 +17,14 @@ describe("tests publishers", () => {
   beforeAll(async () => {
     await testUtilSignIn(mockedRequest);
     await testUtilsDeleteTestData();
+    await sleep(500);
     await testUtilsCreateTestData();
+    await sleep(500);
   }, 10000);
 
-  afterEach(() => {
+  afterEach(async () => {
     reset(mockedRequest);
+    await sleep(500);
   });
 
   afterAll(async () => {
@@ -157,11 +161,22 @@ describe("tests publishers", () => {
           publisherId: 900,
           publishedAt: "2022-09-04T16:07:48.53",
         },
+        {
+          isbn: "Z03",
+          name: "書籍Z03",
+          authorId: 800,
+          publisherId: 900,
+          publishedAt: "2022-09-10T03:05:12.34",
+        },
       ],
       relatedAuthors: [
         {
           authorId: 801,
           name: "テスト著者801",
+        },
+        {
+          authorId: 800,
+          name: "テスト著者800",
         },
       ],
     });

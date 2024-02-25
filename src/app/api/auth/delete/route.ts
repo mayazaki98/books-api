@@ -12,7 +12,7 @@ import { NextRequest } from "next/server";
  * @returns レスポンス
  */
 export const DELETE = async (req: NextRequest) => {
-  console.log(`${req.url} POST called`);
+  console.log(`■${req.url} POST called`);
 
   //ユーザー削除
   let result: ResultSupabase;

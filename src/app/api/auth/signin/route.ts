@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
  * @returns レスポンス
  */
 export const POST = async (req: NextRequest) => {
-  console.log(`${req.url} POST called`);
+  console.log(`■${req.url} POST called`);
 
   //リクエスト取得
   let requestBody: { email: string; password: string };

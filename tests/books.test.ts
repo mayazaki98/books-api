@@ -9,6 +9,7 @@ import {
   testUtilsDeleteTestData,
   testUtilSignIn,
   testUtilsCreateTestData,
+  sleep,
 } from "./testUtil";
 
 describe("tests books", () => {
@@ -17,11 +18,14 @@ describe("tests books", () => {
   beforeAll(async () => {
     await testUtilSignIn(mockedRequest);
     await testUtilsDeleteTestData();
+    await sleep(500);
     await testUtilsCreateTestData();
+    await sleep(500);
   }, 10000);
 
-  afterEach(() => {
+  afterEach(async () => {
     reset(mockedRequest);
+    await sleep(500);
   });
 
   afterAll(async () => {

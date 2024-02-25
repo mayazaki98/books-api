@@ -79,6 +79,31 @@ export const testUtilsCreateTestData = async () => {
         publisherId: 900,
         publishedAt: "2022-09-04T16:07:48.53",
       },
+      {
+        isbn: "Z03",
+        name: "書籍Z03",
+        authorId: 800,
+        publisherId: 900,
+        publishedAt: "2022-09-10T03:05:12.34",
+      },
+    ]);
+  }
+
+  //favorites追加
+  {
+    const { error } = await supabase.from("favorites").insert([
+      {
+        userId: "dca061f8-6261-43df-a9a2-e4241627b9d6",
+        isbn: "Z00",
+      },
+      {
+        userId: "dca061f8-6261-43df-a9a2-e4241627b9d6",
+        isbn: "Z01",
+      },
+      {
+        userId: "dca061f8-6261-43df-a9a2-e4241627b9d6",
+        isbn: "Z03",
+      },
     ]);
   }
 };
@@ -109,4 +134,15 @@ export const testUtilsDeleteTestData = async () => {
       .delete()
       .in("isbn", ["Z00", "Z01", "Z02"]);
   }
+
+  //favorites 削除
+  {
+    const { error } = await supabase
+      .from("favorites")
+      .delete()
+      .eq("userId", "dca061f8-6261-43df-a9a2-e4241627b9d6");
+  }
 };
+
+export const sleep = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));

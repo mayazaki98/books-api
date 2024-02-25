@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
  * @returns レスポンス
  */
 export const POST = async (req: NextRequest) => {
-  console.log(`${req.url} POST called`);
+  console.log(`■${req.url} POST called`);
 
   const resUser = await getUser();
   if (resUser.result !== ResultSupabase.Success) {

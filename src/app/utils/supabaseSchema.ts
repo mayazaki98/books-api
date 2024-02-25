@@ -89,6 +89,36 @@ export type Database = {
           }
         ]
       }
+      favorites: {
+        Row: {
+          isbn: string
+          userId: string
+        }
+        Insert: {
+          isbn: string
+          userId?: string
+        }
+        Update: {
+          isbn?: string
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_favorites_isbn_fkey"
+            columns: ["isbn"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["isbn"]
+          },
+          {
+            foreignKeyName: "public_favorites_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       publishers: {
         Row: {
           name: string | null

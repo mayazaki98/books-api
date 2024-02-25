@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { Database } from "./supabaseSchema";
-import { NextRequest } from "next/server";
+import { NextRequest, userAgent } from "next/server";
 
 // Create a single supabase client for interacting with your database
 export const supabase = createClient<Database>(
@@ -33,6 +33,25 @@ export type PublishersUpdate =
   Database["public"]["Tables"]["publishers"]["Update"];
 export type PublishersInsert =
   Database["public"]["Tables"]["publishers"]["Insert"];
+export type FavoritesRow = Database["public"]["Tables"]["favorites"]["Row"];
+export type FavoritesUpdate =
+  Database["public"]["Tables"]["favorites"]["Update"];
+export type FavoritesInsert =
+  Database["public"]["Tables"]["favorites"]["Insert"];
+
+export type FavoritesRowResult = BooksRow & {
+  authors: AuthorsRow | null;
+  publishers: PublishersRow | null;
+};
+
+export type FavoritesWithBooksRow = {
+  books:
+    | (BooksRow & {
+        authors: AuthorsRow | null;
+        publishers: PublishersRow | null;
+      })
+    | null;
+};
 
 export type BooksRowResult = BooksRow & {
   authors: AuthorsRow | null;
@@ -91,6 +110,7 @@ export type ResultGetPublisher = {
 
 export type UserRow = {
   email: string;
+  userId: string;
 };
 
 /**
@@ -99,6 +119,22 @@ export type UserRow = {
 export type ResultGetUser = {
   result: ResultSupabase;
   data: UserRow | null;
+};
+
+/**
+ * お気に入り書籍データ取得結果
+ */
+export type ResultGetFavorites = {
+  result: ResultSupabase;
+  data: BooksRowResult[];
+};
+
+/**
+ * お気に入り書籍データ更新結果
+ */
+export type ResultUpdFavorites = {
+  result: ResultSupabase;
+  data: BooksRowResult | null;
 };
 
 /**
@@ -925,7 +961,7 @@ export const signUp = async (
   }
 
   console.log("signUp success");
-  res.data = { email: data.user.email };
+  res.data = { email: data.user.email, userId: data.user.id };
   res.result = ResultSupabase.Success;
   return res;
 };
@@ -967,7 +1003,7 @@ export const signIn = async (
   }
 
   console.log("signIn success");
-  res.data = { email: data.user.email };
+  res.data = { email: data.user.email, userId: data.user.id };
   res.result = ResultSupabase.Success;
   return res;
 };
@@ -1010,17 +1046,19 @@ export const updatePassword = async (
   } = await supabase.auth.updateUser({ password: password });
 
   console.log(
-    `getUser user=${JSON.stringify(user)}, error=${JSON.stringify(error)}`
+    `updatePassword user=${JSON.stringify(user)}, error=${JSON.stringify(
+      error
+    )}`
   );
 
   if (!user || !user.email) {
-    console.log("getUser invalid user");
+    console.log("updatePassword invalid user");
     res.result = ResultSupabase.Error;
     return res;
   }
 
-  console.log("getUser success");
-  res.data = { email: user.email };
+  console.log("updatePassword success");
+  res.data = { email: user.email, userId: user.email };
   res.result = ResultSupabase.Success;
   return res;
 };
@@ -1037,11 +1075,7 @@ export const getUser = async (): Promise<ResultGetUser> => {
 
   //セッションからユーザー情報取得
   const { data, error } = await supabase.auth.getSession();
-  console.log(
-    `getUser getSession data=${JSON.stringify(data)}, error=${JSON.stringify(
-      error
-    )}`
-  );
+  console.log(`getUser getSession error=${JSON.stringify(error)}`);
 
   if (error) {
     console.log(`getUser getSession exists error`);
@@ -1061,7 +1095,7 @@ export const getUser = async (): Promise<ResultGetUser> => {
   }
 
   console.log("getUser success");
-  res.data = { email: data.session.user.email };
+  res.data = { email: data.session.user.email, userId: data.session.user.id };
   res.result = ResultSupabase.Success;
   return res;
 };
@@ -1114,4 +1148,296 @@ export const deleteUser = async (): Promise<ResultSupabase> => {
     console.log("deleteUser success");
     return ResultSupabase.Success;
   }
+};
+
+/**
+ * お気に入り書籍データ取得
+ * @param ユーザーID
+ * @returns お気に入り書籍データ取得結果
+ */
+export const getFavorites = async (
+  userId: string
+): Promise<ResultGetFavorites> => {
+  let res: ResultGetFavorites = {
+    result: ResultSupabase.Error,
+    data: [],
+  };
+
+  const { data, error } = await supabase
+    .from("favorites")
+    .select(
+      `
+      books (
+        isbn,
+        name,
+        publishedAt,
+        authorId,
+        publisherId,
+        authors (
+          authorId,
+          name
+        ),
+        publishers (
+          publisherId,
+          name
+        )
+      )
+    `
+    )
+    .filter("userId", "eq", userId)
+    .order("isbn");
+
+  console.log(
+    `getFavorites data=${JSON.stringify(data)}, error=${JSON.stringify(error)}`
+  );
+
+  if (error) {
+    console.log(`getFavorites exists error`);
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  if (!data) {
+    console.log(`getFavorites data is null`);
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  if (data.length === 0) {
+    console.log(`getFavorites data count is zero`);
+    res.result = ResultSupabase.Nothing;
+    return res;
+  } else {
+    console.log(`getBook find data`);
+    res.result = ResultSupabase.Success;
+    for (let srcItem of data) {
+      if (srcItem.books) {
+        res.data.push(srcItem.books);
+      }
+    }
+    return res;
+  }
+};
+
+/**
+ * お気に入り書籍データ存在確認
+ * @param ユーザーID
+ * @returns お気に入り書籍データ取得結果
+ */
+export const existsFavorites = async (
+  userId: string,
+  isbn: string
+): Promise<ResultSupabase> => {
+  const { data, error } = await supabase
+    .from("favorites")
+    .select("*")
+    .filter("userId", "eq", userId)
+    .filter("isbn", "eq", isbn);
+
+  console.log(
+    `existsFavorites data=${JSON.stringify(data)}, error=${JSON.stringify(
+      error
+    )}`
+  );
+
+  if (error) {
+    console.log(`existsFavorites exists error`);
+    return ResultSupabase.Error;
+  }
+
+  if (!data) {
+    console.log(`existsFavorites data is null`);
+    return ResultSupabase.Error;
+  }
+
+  if (data.length > 0) {
+    return ResultSupabase.Success;
+  } else {
+    return ResultSupabase.Nothing;
+  }
+};
+
+/**
+ * お気に入り書籍データ更新
+ * @param userId ユーザーID
+ * @param isbnFrom 更新前のISBN
+ * @param isbnTo 更新後のISBN
+ * @returns お気に入り書籍データ更新結果
+ */
+export const updateFavorites = async (
+  userId: string,
+  isbnFrom: string,
+  isbnTo: string
+): Promise<ResultUpdFavorites> => {
+  let res: ResultUpdFavorites = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
+  const { data, error } = await supabase
+    .from("favorites")
+    .update({
+      isbn: isbnTo,
+    })
+    .eq("userId", userId)
+    .eq("isbn", isbnFrom)
+    .select(
+      `
+        books (
+          isbn,
+          name,
+          publishedAt,
+          authorId,
+          publisherId,
+          authors (
+            authorId,
+            name
+          ),
+          publishers (
+            publisherId,
+            name
+          )
+        )
+      `
+    );
+
+  console.log(
+    `updateFavorites data=${JSON.stringify(data)}, error=${JSON.stringify(
+      error
+    )}`
+  );
+
+  if (error) {
+    console.log(`updateFavorites exists error`);
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  if (!data) {
+    console.log(`updateFavorites updated data is null`);
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  switch (data.length) {
+    case 0:
+      console.log(`updateFavorites updated data count is zero`);
+      res.result = ResultSupabase.Nothing;
+      return res;
+
+    case 1:
+      console.log(`updateFavorites find updated data`);
+      res.data = data[0].books;
+      res.result = ResultSupabase.Success;
+      return res;
+
+    default:
+      console.log(
+        `updateFavorites updated data count is unexpected(${data.length})`
+      );
+      res.result = ResultSupabase.Error;
+      return res;
+  }
+};
+
+/**
+ * お気に入り書籍データ追加
+ * @param userId ユーザーID
+ * @param isbn ISBN
+ * @returns お気に入り書籍データ追加結果
+ */
+export const insertFavorites = async (
+  userId: string,
+  isbn: string
+): Promise<ResultUpdFavorites> => {
+  let res: ResultUpdFavorites = {
+    result: ResultSupabase.Error,
+    data: null,
+  };
+  const { data, error } = await supabase
+    .from("favorites")
+    .insert({
+      userId: userId,
+      isbn: isbn,
+    })
+    .select(
+      `
+        books (
+          isbn,
+          name,
+          publishedAt,
+          authorId,
+          publisherId,
+          authors (
+            authorId,
+            name
+          ),
+          publishers (
+            publisherId,
+            name
+          )
+        )
+      `
+    );
+
+  console.log(
+    `insertFavorites data=${JSON.stringify(data)}, error=${JSON.stringify(
+      error
+    )}`
+  );
+
+  if (error) {
+    console.log(`insertFavorites exists error`);
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  if (!data) {
+    console.log(`insertFavorites inserted data is null`);
+    res.result = ResultSupabase.Error;
+    return res;
+  }
+
+  switch (data.length) {
+    case 0:
+      console.log(`insertFavorites inserted data count is zero`);
+      res.result = ResultSupabase.Error;
+      return res;
+
+    case 1:
+      console.log(`insertFavorites find inserted data`);
+      res.data = data[0].books;
+      res.result = ResultSupabase.Success;
+      return res;
+
+    default:
+      console.log(
+        `insertFavorites inserted data count is unexpected(${data.length})`
+      );
+      res.result = ResultSupabase.Error;
+      return res;
+  }
+};
+
+/**
+ * お気に入り書籍データ削除
+ * @param isbn ISBN
+ * @returns お気に入り書籍データ削除結果
+ */
+export const deleteFavorites = async (
+  userId: string,
+  isbn: string
+): Promise<ResultSupabase> => {
+  const { error } = await supabase
+    .from("favorites")
+    .delete()
+    .eq("userId", userId)
+    .eq("isbn", isbn);
+  console.log(`deleteFavorites error=${JSON.stringify(error)}`);
+
+  if (error) {
+    console.log(`deleteFavorites exists error`);
+    return ResultSupabase.Error;
+  }
+
+  return ResultSupabase.Success;
 };

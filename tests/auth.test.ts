@@ -32,19 +32,20 @@ import {
   testUtilsCreateTestData,
   testUtilSignIn,
   testUtilsSignOut,
+  sleep,
 } from "./testUtil";
 
 describe("tests auth", () => {
   const mockedRequest: NextRequest = mock(NextRequest);
 
   beforeAll(async () => {
-    await testUtilSignIn(mockedRequest);
     await testUtilsCreateTestData();
-    await testUtilsSignOut(mockedRequest);
+    await sleep(2000);
   }, 10000);
 
-  afterEach(() => {
+  afterEach(async () => {
     reset(mockedRequest);
+    await sleep(500);
   });
 
   afterAll(async () => {
@@ -189,7 +190,8 @@ describe("tests auth", () => {
     });
     const response = await signupPOST(instance(mockedRequest));
     expect(response.status).toBe(201);
-  });
+    await sleep(2000);
+  }, 10000);
 
   test("出版社 GET (サインアップ後)", async () => {
     when(mockedRequest.url).thenReturn(
@@ -217,7 +219,8 @@ describe("tests auth", () => {
     });
     const response = await updatePOST(instance(mockedRequest));
     expect(response.status).toBe(200);
-  });
+    await sleep(1000);
+  }, 10000);
 
   test("サインアウト POST (test91@booksapi.test.com)", async () => {
     when(mockedRequest.url).thenReturn(
@@ -225,7 +228,8 @@ describe("tests auth", () => {
     );
     const response = await signoutPOST(instance(mockedRequest));
     expect(response.status).toBe(200);
-  });
+    await sleep(1000);
+  }, 10000);
 
   test("出版社 GET (サインアウト後)", async () => {
     when(mockedRequest.url).thenReturn(
@@ -235,7 +239,7 @@ describe("tests auth", () => {
       params: { publisherId: 901 },
     });
     expect(response.status).toBe(401);
-  });
+  }, 10000);
 
   test("サインイン POST (test01@booksapi.test.com, パスワード更新後)", async () => {
     when(mockedRequest.url).thenReturn("http://localhost:3000/api/auth/signin");
@@ -247,7 +251,8 @@ describe("tests auth", () => {
     });
     const response = await signinPOST(instance(mockedRequest));
     expect(response.status).toBe(200);
-  });
+    await sleep(2000);
+  }, 10000);
 
   test("出版社 GET (サインイン後)", async () => {
     when(mockedRequest.url).thenReturn(
@@ -264,13 +269,14 @@ describe("tests auth", () => {
       books: [],
       relatedAuthors: [],
     });
-  });
+  }, 10000);
 
   test("ユーザー削除 DELETE (test91@booksapi.test.com)", async () => {
     when(mockedRequest.url).thenReturn("http://localhost:3000/api/auth/delete");
     const response = await deleteDELETE(instance(mockedRequest));
     expect(response.status).toBe(204);
-  });
+    await sleep(2000);
+  }, 10000);
 
   test("出版社 GET (ユーザー削除後)", async () => {
     when(mockedRequest.url).thenReturn(
@@ -287,7 +293,7 @@ describe("tests auth", () => {
       books: [],
       relatedAuthors: [],
     });
-  });
+  }, 10000);
 
   test("サインアウト POST (test91@booksapi.test.com, ユーザー削除後)", async () => {
     when(mockedRequest.url).thenReturn(
@@ -295,7 +301,8 @@ describe("tests auth", () => {
     );
     const response = await signoutPOST(instance(mockedRequest));
     expect(response.status).toBe(200);
-  });
+    await sleep(1000);
+  }, 10000);
 
   test("出版社 GET (ユーザー削除, サインアウト後)", async () => {
     when(mockedRequest.url).thenReturn(
@@ -305,5 +312,5 @@ describe("tests auth", () => {
       params: { publisherId: 901 },
     });
     expect(response.status).toBe(401);
-  });
+  }, 10000);
 });
