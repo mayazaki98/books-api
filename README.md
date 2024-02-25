@@ -1,5 +1,119 @@
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+## 概要
+
+WEB-API サーバー
+
+https://main.d7trag5vp9gsh.amplifyapp.com/
+で公開しています。
+
+- フレームワーク : Next.js
+- 言語 : TypeScript
+- データベース・認証 : supabase
+
+## API
+
+- authors(著者)
+
+  - POST(作成)
+    - エンドポイント
+      /authors
+    - リクエスト
+      {authorId:number, name:string}
+  - GET(取得)
+    - エンドポイント
+      /authors/[authorId]
+  - PUT(更新)
+    - エンドポイント
+      /authors/[authorId]
+    - リクエスト
+      {authorId:number, name:string}
+  - DELETE(削除)
+    - エンドポイント
+      /authors/[authorId]
+
+- publishers(出版社)
+
+  - POST(作成)
+    - エンドポイント
+      /publishers
+    - リクエスト
+      {publisherId:number, name:string}
+  - GET(取得)
+    - エンドポイント
+      /publishers/[publisherId]
+  - PUT(更新)
+    - エンドポイント
+      /publishers/[publisherId]
+    - リクエスト
+      {publisherId:number, name:string}
+  - DELETE(削除)
+    - エンドポイント
+      /publishers/[publisherId]
+
+- publishers(出版社)
+
+  - POST(作成)
+    - エンドポイント
+      /publishers
+    - リクエスト
+      {isbn:string, name: string, publishedAt:string, authorId:number, publisherId:number}
+  - GET(取得)
+    - エンドポイント
+      /publishers/[publisherId]
+  - PUT(更新)
+    - エンドポイント
+      /publishers/[publisherId]
+    - リクエスト
+      {isbn:string, name: string, publishedAt:string, authorId:number, publisherId:number}
+  - DELETE(削除)
+    - エンドポイント
+      /publishers/[publisherId]
+
+- favorites(お気に入り書籍)
+
+  - POST(作成)
+    - エンドポイント
+      /favorites
+    - リクエスト
+      {isbn:string}
+  - GET(取得)
+    - エンドポイント
+      /favorites
+  - PUT(更新)
+    - エンドポイント
+      /favorites
+    - リクエスト
+      {isbnFrom:string, isbnTo:string}
+  - DELETE(削除)
+    - エンドポイント
+      /favorites
+    - リクエスト
+      {isbn:string}
+
+- auth(認証)
+  - POST(サインアップ)
+    - エンドポイント
+      /auth/signup
+    - リクエスト
+      {email:string, password:string}
+  - POST(サインイン)
+    - エンドポイント
+      /auth/signin
+    - リクエスト
+      {email:string, password:string}
+  - POST(サインアウト)
+    - エンドポイント
+      /auth/signout
+  - POST(パスワード更新)
+    - エンドポイント
+      /auth/update
+    - リクエスト
+      {password:string}
+  - DELETE(削除)
+    - エンドポイント
+      /auth/delete
+
 ## Getting Started
 
 First, run the development server:
