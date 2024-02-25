@@ -1,6 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { Database } from "./supabaseSchema";
-import { NextRequest } from "next/server";
+import {
+  createServerComponentClient,
+  createRouteHandlerClient,
+} from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 
 // Create a single supabase client for interacting with your database
 export const supabase = createClient<Database>(
@@ -12,6 +16,8 @@ export const supabaseAdmin = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE!
 );
+
+//export const supabaseAuth_ = createServerComponentClient({ cookies });
 
 /**
  * Supabase実行結果
@@ -91,6 +97,7 @@ export type ResultGetPublisher = {
 
 export type UserRow = {
   email: string;
+  id: string;
 };
 
 /**
@@ -898,8 +905,10 @@ export const signUp = async (
     data: null,
   };
 
+  const supabaseAuth = createServerComponentClient({ cookies });
+
   //サインアップ
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabaseAuth.auth.signUp({ email, password });
   console.log(
     `signUp data=${JSON.stringify(data)}, error=${JSON.stringify(error)}`
   );
@@ -925,7 +934,7 @@ export const signUp = async (
   }
 
   console.log("signUp success");
-  res.data = { email: data.user.email };
+  res.data = { email: data.user.email, id: data.user.id };
   res.result = ResultSupabase.Success;
   return res;
 };
@@ -945,8 +954,10 @@ export const signIn = async (
     data: null,
   };
 
+  const supabaseAuth = createServerComponentClient({ cookies });
+
   //サインイン
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabaseAuth.auth.signInWithPassword({
     email,
     password,
   });
@@ -967,7 +978,7 @@ export const signIn = async (
   }
 
   console.log("signIn success");
-  res.data = { email: data.user.email };
+  res.data = { email: data.user.email, id: data.user.id };
   res.result = ResultSupabase.Success;
   return res;
 };
@@ -977,8 +988,10 @@ export const signIn = async (
  * @returns 処理結果
  */
 export const signOut = async (): Promise<ResultSupabase> => {
+  const supabaseAuth = createServerComponentClient({ cookies });
+
   //サインアウト
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabaseAuth.auth.signOut();
   console.log(`signOut error=${JSON.stringify(error)}`);
 
   if (error) {
@@ -1003,11 +1016,13 @@ export const updatePassword = async (
     data: null,
   };
 
+  const supabaseAuth = createServerComponentClient({ cookies });
+
   //パスワード更新
   const {
     data: { user },
     error,
-  } = await supabase.auth.updateUser({ password: password });
+  } = await supabaseAuth.auth.updateUser({ password: password });
 
   console.log(
     `getUser user=${JSON.stringify(user)}, error=${JSON.stringify(error)}`
@@ -1020,7 +1035,7 @@ export const updatePassword = async (
   }
 
   console.log("getUser success");
-  res.data = { email: user.email };
+  res.data = { email: user.email, id: user.id };
   res.result = ResultSupabase.Success;
   return res;
 };
@@ -1036,7 +1051,8 @@ export const getUser = async (): Promise<ResultGetUser> => {
   };
 
   //セッションからユーザー情報取得
-  const { data, error } = await supabase.auth.getSession();
+  const supabaseAuth = createServerComponentClient({ cookies });
+  const { data, error } = await supabaseAuth.auth.getSession();
   console.log(
     `getUser getSession data=${JSON.stringify(data)}, error=${JSON.stringify(
       error
@@ -1061,7 +1077,7 @@ export const getUser = async (): Promise<ResultGetUser> => {
   }
 
   console.log("getUser success");
-  res.data = { email: data.session.user.email };
+  res.data = { email: data.session.user.email, id: data.session.user.id };
   res.result = ResultSupabase.Success;
   return res;
 };
@@ -1074,7 +1090,8 @@ export const deleteUser = async (): Promise<ResultSupabase> => {
   //セッションからユーザーID取得
   let id: string;
   {
-    const { data, error } = await supabase.auth.getSession();
+    const supabaseAuth = createServerComponentClient({ cookies });
+    const { data, error } = await supabaseAuth.auth.getSession();
     console.log(
       `deleteUser getSession data=${JSON.stringify(
         data

@@ -4,6 +4,8 @@ import { instance, mock, reset, when } from "ts-mockito";
 import { POST as signinPOST } from "@/app/api/auth/signin/route";
 import { POST as signoutPOST } from "@/app/api/auth/signout/route";
 import { NextRequest } from "next/server";
+import { promises } from "readline";
+import { cookies } from "next/headers";
 
 // Create a single supabase client for interacting with your database
 export const supabase = createClient<Database>(
@@ -109,4 +111,38 @@ export const testUtilsDeleteTestData = async () => {
       .delete()
       .in("isbn", ["Z00", "Z01", "Z02"]);
   }
+};
+
+export const testUtilsSendRequest = async (
+  url: string,
+  method: string,
+  body: any
+): Promise<{ response: Response; json: any }> => {
+  let response: Response;
+
+  if (method === "GET") {
+    response = await fetch(url, {
+      credentials: "include",
+      method: method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  } else {
+    response = await fetch(url, {
+      credentials: "include",
+      method: method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  const text = await response.text();
+  let json: any;
+  if (text) {
+    json = JSON.parse(await text);
+  }
+  return { response, json };
 };
