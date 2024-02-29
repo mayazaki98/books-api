@@ -8,23 +8,29 @@ import {
   testUtilsDeleteTestData,
   testUtilSignIn,
   testUtilsCreateTestData,
-  sleep,
 } from "./testUtil";
+
+jest.mock("../src/app/utils/supabaseAuth");
+import * as supabaseAuth from "../src/app/utils/supabaseAuth";
+import { supabase } from "@/app/utils/supabase";
 
 describe("tests authors", () => {
   const mockedRequest: NextRequest = mock(NextRequest);
 
   beforeAll(async () => {
+    //getServerComponentClient は cookie を利用するクライアントを返すが、
+    //jest では cookie を利用できないので、cookie を利用しないクライアント
+    //を返すようにモックする。
+    const walkSpy = jest
+      .spyOn(supabaseAuth, "getServerComponentClient")
+      .mockReturnValue(supabase);
+
     await testUtilSignIn(mockedRequest);
-    await testUtilsDeleteTestData();
-    await sleep(500);
     await testUtilsCreateTestData();
-    await sleep(500);
   }, 10000);
 
   afterEach(async () => {
     reset(mockedRequest);
-    await sleep(500);
   });
 
   afterAll(async () => {

@@ -27,25 +27,28 @@ import {
   GET as booksGET,
   PUT as booksPUT,
 } from "@/app/api/books/[isbn]/route";
-import {
-  testUtilsDeleteTestData,
-  testUtilsCreateTestData,
-  testUtilSignIn,
-  testUtilsSignOut,
-  sleep,
-} from "./testUtil";
+import { testUtilsDeleteTestData, testUtilsCreateTestData } from "./testUtil";
+import { supabase } from "@/app/utils/supabase";
+
+jest.mock("../src/app/utils/supabaseAuth");
+import * as supabaseAuth from "../src/app/utils/supabaseAuth";
 
 describe("tests auth", () => {
   const mockedRequest: NextRequest = mock(NextRequest);
 
   beforeAll(async () => {
+    //getServerComponentClient は cookie を利用するクライアントを返すが、
+    //jest では cookie を利用できないので、cookie を利用しないクライアント
+    //を返すようにモックする。
+    const walkSpy = jest
+      .spyOn(supabaseAuth, "getServerComponentClient")
+      .mockReturnValue(supabase);
+
     await testUtilsCreateTestData();
-    await sleep(2000);
   }, 10000);
 
   afterEach(async () => {
     reset(mockedRequest);
-    await sleep(500);
   });
 
   afterAll(async () => {
@@ -54,6 +57,7 @@ describe("tests auth", () => {
 
   test("著者 GET (サインインなし)", async () => {
     when(mockedRequest.url).thenReturn("http://localhost:3000/api/authors/801");
+
     const response = await authorsGET(instance(mockedRequest), {
       params: { authorId: 801 },
     });
@@ -190,7 +194,6 @@ describe("tests auth", () => {
     });
     const response = await signupPOST(instance(mockedRequest));
     expect(response.status).toBe(201);
-    await sleep(2000);
   }, 10000);
 
   test("出版社 GET (サインアップ後)", async () => {
@@ -219,7 +222,6 @@ describe("tests auth", () => {
     });
     const response = await updatePOST(instance(mockedRequest));
     expect(response.status).toBe(200);
-    await sleep(1000);
   }, 10000);
 
   test("サインアウト POST (test91@booksapi.test.com)", async () => {
@@ -228,7 +230,6 @@ describe("tests auth", () => {
     );
     const response = await signoutPOST(instance(mockedRequest));
     expect(response.status).toBe(200);
-    await sleep(1000);
   }, 10000);
 
   test("出版社 GET (サインアウト後)", async () => {
@@ -251,7 +252,6 @@ describe("tests auth", () => {
     });
     const response = await signinPOST(instance(mockedRequest));
     expect(response.status).toBe(200);
-    await sleep(2000);
   }, 10000);
 
   test("出版社 GET (サインイン後)", async () => {
@@ -275,7 +275,6 @@ describe("tests auth", () => {
     when(mockedRequest.url).thenReturn("http://localhost:3000/api/auth/delete");
     const response = await deleteDELETE(instance(mockedRequest));
     expect(response.status).toBe(204);
-    await sleep(2000);
   }, 10000);
 
   test("出版社 GET (ユーザー削除後)", async () => {
@@ -301,7 +300,6 @@ describe("tests auth", () => {
     );
     const response = await signoutPOST(instance(mockedRequest));
     expect(response.status).toBe(200);
-    await sleep(1000);
   }, 10000);
 
   test("出版社 GET (ユーザー削除, サインアウト後)", async () => {

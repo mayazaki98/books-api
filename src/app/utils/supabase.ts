@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { Database } from "./supabaseSchema";
 import { NextRequest, userAgent } from "next/server";
+import { getServerComponentClient } from "./supabaseAuth";
 
 // Create a single supabase client for interacting with your database
 export const supabase = createClient<Database>(
@@ -935,7 +936,8 @@ export const signUp = async (
   };
 
   //サインアップ
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const supabaseAuth = getServerComponentClient();
+  const { data, error } = await supabaseAuth.auth.signUp({ email, password });
   console.log(
     `signUp data=${JSON.stringify(data)}, error=${JSON.stringify(error)}`
   );
@@ -982,7 +984,8 @@ export const signIn = async (
   };
 
   //サインイン
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const supabaseAuth = getServerComponentClient();
+  const { data, error } = await supabaseAuth.auth.signInWithPassword({
     email,
     password,
   });
@@ -1014,7 +1017,8 @@ export const signIn = async (
  */
 export const signOut = async (): Promise<ResultSupabase> => {
   //サインアウト
-  const { error } = await supabase.auth.signOut();
+  const supabaseAuth = getServerComponentClient();
+  const { error } = await supabaseAuth.auth.signOut();
   console.log(`signOut error=${JSON.stringify(error)}`);
 
   if (error) {
@@ -1040,10 +1044,11 @@ export const updatePassword = async (
   };
 
   //パスワード更新
+  const supabaseAuth = getServerComponentClient();
   const {
     data: { user },
     error,
-  } = await supabase.auth.updateUser({ password: password });
+  } = await supabaseAuth.auth.updateUser({ password: password });
 
   console.log(
     `updatePassword user=${JSON.stringify(user)}, error=${JSON.stringify(
@@ -1074,7 +1079,8 @@ export const getUser = async (): Promise<ResultGetUser> => {
   };
 
   //セッションからユーザー情報取得
-  const { data, error } = await supabase.auth.getSession();
+  const supabaseAuth = getServerComponentClient();
+  const { data, error } = await supabaseAuth.auth.getSession();
   console.log(`getUser getSession error=${JSON.stringify(error)}`);
 
   if (error) {
@@ -1108,7 +1114,8 @@ export const deleteUser = async (): Promise<ResultSupabase> => {
   //セッションからユーザーID取得
   let id: string;
   {
-    const { data, error } = await supabase.auth.getSession();
+    const supabaseAuth = getServerComponentClient();
+    const { data, error } = await supabaseAuth.auth.getSession();
     console.log(
       `deleteUser getSession data=${JSON.stringify(
         data
